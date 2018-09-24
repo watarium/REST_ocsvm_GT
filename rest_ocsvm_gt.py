@@ -21,13 +21,13 @@ def preds():
     # loading
     response = jsonify()
     new_data = []
-    new_data.append(request.form['date'])
-    new_data.append('account_' + request.form['account'])
-    new_data.append('ip_' + request.form['ip'])
-    new_data.append('service_' + request.form['service'])
-    new_data.append('process_' + request.form['process'])
-    new_data.append('objectname_' + request.form['objectname'])
-    new_data.append('sharedname_' + request.form['sharedname'])
+    new_data.append(str(request.form.get('date',None)))
+    new_data.append('account_' + str(request.form.get('account',None)))
+    new_data.append('ip_' + str(request.form.get('ip',None)))
+    new_data.append('service_' + str(request.form.get('service',None)))
+    new_data.append('process_' + str(request.form.get('process',None)))
+    new_data.append('objectname_' + str(request.form.get('objectname',None)))
+    new_data.append('sharedname_' + str(request.form.get('sharedname',None)))
 
     base_df = pd.DataFrame(columns=base_dummies.columns[2:-3])
     base_df.loc[0] = 0
