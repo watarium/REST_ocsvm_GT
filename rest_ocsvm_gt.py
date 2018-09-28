@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import urllib.parse
 from flask import Flask, jsonify, request
+from machine_learning import ML
+from signature_detection import SignatureDetector
+from InputLog import InputLog
 app = Flask(__name__)
 
 clf = joblib.load('ocsvm_gt.pkl')
@@ -15,45 +18,28 @@ base_dummies = pd.read_csv('data_dummies.csv')
 # X = np.zeros((10, max_len))
 # model.predict(X, batch_size=32)
 
-
 @app.route('/preds', methods=['POST'])
 def preds():
     # loading
     response = jsonify()
-    new_data = []
-    new_data.append(str(request.form.get('date',None)))
-    new_data.append('account_' + str(request.form.get('account',None)))
-    new_data.append('ip_' + str(request.form.get('ip',None)))
-    new_data.append('service_' + str(request.form.get('service',None)))
-    new_data.append('process_' + str(request.form.get('process',None)))
-    new_data.append('objectname_' + str(request.form.get('objectname',None)))
-    new_data.append('sharedname_' + str(request.form.get('sharedname',None)))
+    datetime = request.form.get('date',None)
+    eventid = request.form.get('event_id',None)
+    accountname = request.form.get('account',None)
+    clientaddr = request.form.get('ip',None)
+    servicename = request.form.get('service',None)
+    processname = request.form.get('process',None)
+    objectname = request.form.get('objectname',None)
 
-    base_df = pd.DataFrame(columns=base_dummies.columns[2:-3])
-    base_df.loc[0] = 0
+    # To specify parameter as Object
+    inputLog = InputLog.InputLog(datetime, eventid, accountname, clientaddr, servicename, processname, objectname)
+    sig_result = SignatureDetector.signature_detect(inputLog)
+    clientaddr = inputLog.get_clientaddr()
 
-    for colname in new_data:
-         if colname in base_df.columns:
-             base_df[colname][0] = 1
-    base_df['eventID'][0] = request.form['event_id']
-    base_df = base_df.astype(np.int32)
+    if sig_result == 'attack':
+        ai_result = ML.preds(datetime, eventid, accountname, clientaddr, servicename, processname, objectname, base_dummies, clf)
+        return ai_result
 
-
-    pred_data = base_df.values
-
-    result = clf.predict(pred_data)
-    if result == 1:
-        print('normal')
-        response.status_code = 201
-    elif result == -1:
-        print('outlier')
-        response.status_code = 202
-
-    # save
-    # with open('request.log', mode='a') as f:
-    #     f.write(str(response.status_code) + str(prediction) + ',' + str(reqstr) + '\n')
-
-    return response
+    return 'normal'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
